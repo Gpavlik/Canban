@@ -252,7 +252,6 @@ const usersMap = {
 
 window.addEventListener("DOMContentLoaded", initDashboard);
 
-document.getElementById("boardOwner").value = usersMap[currentUser] || currentUser;
 // --- gviz fetch ---
 async function fetchDashboardData() {
   try {
@@ -260,20 +259,31 @@ async function fetchDashboardData() {
     const text = await res.text();
     const json = JSON.parse(text.substr(47).slice(0, -2));
 
-    // пропускаємо перший рядок (заголовки)
     const processes = json.table.rows.slice(2).map(r => ({
       processID: r.c[0]?.v || "",
       title: r.c[1]?.v || "",
       owner: r.c[2]?.v || "",
-      participants: (r.c[3]?.v || "").split(", "),
+      participants: (r.c[3]?.v || "").split(", ").filter(Boolean),
       status: r.c[4]?.v || "new"
     }));
 
-    return {status:"ok", processes};
-  } catch(err) {
+    return { status: "ok", processes };
+  } catch (err) {
     console.error("Помилка при читанні Dashboard через gviz:", err);
-    return {status:"error", processes:[]};
+    return { status: "error", processes: [] };
   }
+}
+
+// --- фільтрація видимих процесів ---
+function getVisibleProcesses(currentUserKey, processes) {
+  const userName = usersMap[currentUserKey] || currentUserKey;
+  const privileged = ["Адмін", "Галина Кузнєцова", "Павло Гриценко"];
+
+  return processes.filter(proc =>
+    privileged.includes(userName) ||
+    proc.owner === userName ||
+    proc.participants.includes(userName)
+  );
 }
 
 
